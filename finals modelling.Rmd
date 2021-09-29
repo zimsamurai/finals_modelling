@@ -1,0 +1,425 @@
+Load the files: the new employees data and the hays data
+
+```{r}
+data <- read.csv(file = "employees2.csv", fileEncoding="UTF-8-BOM")
+income_data <- read.csv(file = "hays_salary_survey.csv")[-c(2,3,4)] #use post tax figures
+
+```
+map the industry income ranges to our data
+
+```{r}
+lower <- income_data[match(data$JobRole,income_data$JobRole),][2]
+upper <- income_data[match(data$JobRole,income_data$JobRole),][3]
+
+#classify the monthly income
+data$IndustryRange <- ifelse(
+data$MonthlyIncome < lower,
+"Below Range",
+ifelse(
+data$MonthlyIncome >= lower & data$MonthlyIncome< upper,
+"Within Range",
+"Above Range")
+)
+```
+Enrich the data
+
+```{r}
+data$IsAttrition <- ifelse(data$Attrition == "Yes",1,0) 
+
+data$IsManagement <- ifelse(
+  data$JobRole == c("Manager", "Manufacturing Director", 
+                    "Research Director", "Sales Executive"),
+  "Yes",
+  "No"
+)
+```
+
+Linear Model lmIncome
+
+```{r}
+numRows <- nrow(data)
+set.seed(60) #changed from 57
+train <- sample(numRows, 0.8*numRows)
+dataTrain <- data[train, ]
+dataTest <- data[-train,]
+
+```
+
+Linear model lmAll
+
+```{r}
+lmAll <- lm(
+formula = YearsAtCompany ~ .,
+data = dataTrain
+)
+summary(lmAll)
+
+```
+Use leaps package to work out which combinations best explain target
+
+```{r}
+library(leaps)
+bestSubset <- regsubsets(
+YearsAtCompany ~ .,
+data = dataTrain,
+nvmax = 24 #number of dependant variables
+)
+summary(bestSubset)
+```
+
+```{r}
+coef(bestSubset, 1:24)
+```
+
+```{r}
+summary(bestSubset)$bic # Get all of the adjusted R^2 values
+```
+Judging which model is best there are different metrics
+
+```{r}
+which.max(summary(bestSubset)$adjr2)
+which.min(summary(bestSubset)$rss)
+which.min(summary(bestSubset)$cp)
+which.min(summary(bestSubset)$bic)
+```
+Plotting the best(bic, for example) measure
+
+```{r}
+plot(
+summary(bestSubset)$bic,
+type = "l",
+main = "No variables by BIC",
+xlab = "Number of Variables",
+ylab = "BIC",
+)
+
+bestBIC = which.min(summary(bestSubset)$bic)
+points(    #showing the point with lowest bic for example
+x = bestBIC,
+y = summary(bestSubset)$bic[bestBIC],
+col = "red",
+pch = "x"
+)
+```
+
+```{r}
+coef(bestSubset, 5)
+coef(bestSubset, 17)
+coef(bestSubset, 22)
+```
+```{r}
+#linear models deemed by by regsubsets, bic and c scores
+lmBest5 <- lm(
+            formula = YearsAtCompany ~ NumCompaniesWorked + TotalWorkingYears + YearsInCurrentRole +     YearsSinceLastPromotion + YearsWithCurrManager ,
+            data = dataTrain,
+            
+)
+lmBest17 <- lm(
+            formula = YearsAtCompany ~ Department+DistanceFromHome+EnvironmentSatisfaction+Gender+
+                JobInvolvement+JobRole+NumCompaniesWorked+RelationshipSatisfaction+TotalWorkingYears+
+                YearsInCurrentRole+YearsSinceLastPromotion +YearsWithCurrManager+IndustryRange+IsManagement,
+            data = dataTrain,
+            
+)
+
+lmBest22 <- lm(
+            formula = YearsAtCompany ~ Age+Department+DistanceFromHome+EnvironmentSatisfaction+
+                Gender+JobInvolvement+JobRole+NumCompaniesWorked+
+                PerformanceRating+RelationshipSatisfaction+StockOptionLevel+
+                TotalWorkingYears+TrainingTimesLastYear+WorkLifeBalance+
+                YearsInCurrentRole+YearsSinceLastPromotion+YearsWithCurrManager+
+                IndustryRange+IsManagement,
+            data = dataTrain,
+            
+)
+
+
+
+```
+```{r}
+#final test on linear models deemed by by regsubsets, bic and c scores
+dataTest$PredictionYears5 <- predict(
+                                  lmBest5,
+                                  newdata = dataTest,
+                                  type = "response"
+)
+dataTest$PredictionYears17 <- predict(
+                                  lmBest17,
+                                  newdata = dataTest,
+                                  type = "response"
+)
+
+dataTest$PredictionYears5 <- predict(
+                                  lmBest5,
+                                  newdata = dataTest,
+                                  type = "response"
+)
+dataTest$PredictionYears22 <- predict(
+                                  lmBest22,
+                                  newdata = dataTest,
+                                  type = "response"
+)
+
+mean((dataTest$YearsAtCompany - dataTest$PredictionYears5)^2) #least so it is best
+mean((dataTest$YearsAtCompany - dataTest$PredictionYears17)^2)
+mean((dataTest$YearsAtCompany - dataTest$PredictionYears22)^2)
+
+#what about on train data
+
+dataTrain$PredictionYears5 <- predict(
+                                  lmBest5,
+                                  newdata = dataTrain,
+                                  type = "response"
+)
+dataTrain$PredictionYears17 <- predict(
+                                  lmBest17,
+                                  newdata = dataTrain,
+                                  type = "response"
+)
+
+mean((dataTrain$YearsAtCompany - dataTrain$PredictionYears5)^2) #least so it is best
+mean((dataTrain$YearsAtCompany - dataTrain$PredictionYears17)^2)
+
+```
+```{r}
+barplot(
+    dataTest$YearsAtCompany,
+    col = "red",
+
+)
+barplot(
+    dataTest$PredictionYears5,
+    col = "blue",
+    add = TRUE
+    
+)
+```
+
+
+Logistic model logmod
+
+
+```{r}
+#gml model with all variables 
+glmAll <- glm(
+          IsAttrition ~  Age +BusinessTravel +Department + 
+                         DistanceFromHome +Education + EnvironmentSatisfaction + 
+                         Gender + JobInvolvement + JobRole + 
+                         MaritalStatus + MonthlyIncome + NumCompaniesWorked + 
+                         OverTime + PerformanceRating +StockOptionLevel +
+                         TotalWorkingYears +TrainingTimesLastYear +WorkLifeBalance +
+                         YearsAtCompany  +YearsInCurrentRole + YearsSinceLastPromotion  +
+                         YearsWithCurrManager +IndustryRange ,
+    data = dataTrain,
+    family = binomial,
+    control = list(maxit = 27)
+)
+
+summary(glmAll)
+
+glmSigSubset <- glm(
+          IsAttrition ~ Age +DistanceFromHome + EnvironmentSatisfaction + 
+                        JobInvolvement + JobRole + MaritalStatus  + 
+                        NumCompaniesWorked + OverTime   +YearsInCurrentRole + 
+                        YearsSinceLastPromotion  +YearsWithCurrManager +RelationshipSatisfaction,
+    data = dataTrain,
+    family = binomial,
+    control = list(maxit = 27)
+)
+summary(glmSigSubset)
+```
+
+
+gmlpreditions
+
+```{r}
+dataTest$ProbabilityAttritionAll <- predict(
+        glmAll,
+        newdata = dataTest,
+        type = "response"
+)
+
+dataTest$ProbabilityAttritionSig <- predict(
+        glmSigSubset,
+        newdata = dataTest,
+        type = "response"
+)
+
+dataTest$PreditionAttritionAll <- ifelse(dataTest$ProbabilityAttritionAll > 0.5, 1, 0)
+dataTest$PreditionAttritionSig <- ifelse(dataTest$ProbabilityAttritionSig > 0.5, 1, 0)
+
+#Confusion matrix 
+
+conf_matrixAll <- table(dataTest$PreditionAttritionAll, dataTest$IsAttrition)
+accuracy.glmAll.test <- sum(diag(conf_matrixAll))/sum(conf_matrixAll)
+accuracy.glmAll.test
+
+conf_matrixSig <- table(dataTest$PreditionAttritionSig, dataTest$IsAttrition)
+accuracy.glmSigSubset.test <- sum(diag(conf_matrixSig))/sum(conf_matrixSig)
+accuracy.glmSigSubset.test
+```
+
+Accuracy on Train data
+
+```{r}
+dataTrain$ProbabilityAttritionAll <- predict(
+        glmAll,
+        newdata = dataTrain,
+        type = "response"
+)
+
+dataTrain$ProbabilityAttritionSig <- predict(
+        glmSigSubset,
+        newdata = dataTrain,
+        type = "response"
+)
+
+dataTrain$PreditionAttritionAll <- ifelse(dataTrain$ProbabilityAttritionAll > 0.5, 1, 0)
+dataTrain$PreditionAttritionSig <- ifelse(dataTrain$ProbabilityAttritionSig > 0.5, 1, 0)
+
+#Confusion matrix 
+
+(conf_matrixAll.train <- table(dataTrain$PreditionAttritionAll, dataTrain$IsAttrition))
+accuracy.glmAll.train <- sum(diag(conf_matrixAll.train))/sum(conf_matrixAll.train)
+accuracy.glmAll.train
+
+conf_matrixSig.train <- table(dataTrain$PreditionAttritionSig, dataTrain$IsAttrition)
+accuracy.glmSigSubset.train <- sum(diag(conf_matrixSig.train))/sum(conf_matrixSig.train)
+accuracy.glmSigSubset.train
+```
+
+Modelling with a Decision Tree
+
+```{r}
+
+library(rpart)
+library(rpart.plot)
+tree <- rpart(
+            Attrition ~ Age +BusinessTravel +Department + 
+              DistanceFromHome + Education + EnvironmentSatisfaction + 
+              Gender + JobInvolvement + JobRole + MaritalStatus + 
+              MonthlyIncome + NumCompaniesWorked + OverTime + 
+              PerformanceRating +StockOptionLevel +TotalWorkingYears +
+              TrainingTimesLastYear +WorkLifeBalance +YearsAtCompany  +
+              YearsInCurrentRole + YearsSinceLastPromotion  +YearsWithCurrManager +
+              IndustryRange + RelationshipSatisfaction + IsManagement,
+        data = dataTrain,
+        method = "class",
+        #parms=list(split="gini"),
+        minsplit=20, #smallest number of observations in the parent node that could be split further.default is 20.
+        minbucket = 1 #smallest number of observations that are allowed in a terminal node
+)
+
+rpart.plot(tree)
+tree
+
+```
+```{r}
+dataTest$PredictionTree <-predict(
+  tree,
+  newdata = dataTest,
+  type = "class"
+)
+
+conf_matrixTree <- table(dataTest$PredictionTree, dataTest$Attrition)
+accuracy.Tree.test <- sum(diag(conf_matrixTree))/sum(conf_matrixTree)
+accuracy.Tree.test
+
+dataTrain$PredictionTree <-predict(
+  tree,
+  newdata = dataTrain,
+  type = "class"
+)
+
+conf_matrixTree.train <- table(dataTrain$PredictionTree, dataTrain$Attrition)
+accuracy.Tree.train <- sum(diag(conf_matrixTree.train))/sum(conf_matrixTree.train)
+accuracy.Tree.train
+
+```
+Random forest
+
+```{r}
+
+library(randomForest)
+require(caTools)
+rf <- randomForest(
+  IsAttrition ~ Age +BusinessTravel +Department + DistanceFromHome +
+                Education + EnvironmentSatisfaction + Gender + 
+                JobInvolvement + JobRole + MaritalStatus + 
+                MonthlyIncome + NumCompaniesWorked + OverTime + 
+                PerformanceRating +StockOptionLevel +TotalWorkingYears +
+                TrainingTimesLastYear +WorkLifeBalance +YearsAtCompany  +
+                YearsInCurrentRole + YearsSinceLastPromotion  +YearsWithCurrManager +
+                IndustryRange + IsManagement,
+  data = dataTrain,
+  parms=list(split="gini")
+)
+
+dataTest$PredRF.probability <-predict(
+                rf,
+                newdata = dataTest
+                
+)
+dataTest$PredRF <- ifelse(dataTest$PredRF.probability > 0.5, 1, 0)
+
+conf_matrixRF.test <- table(dataTest$PredRF, dataTest$IsAttrition)
+accuracy.RF.test <- sum(diag(conf_matrixRF.test))/sum(conf_matrixRF.test)
+accuracy.RF.test
+
+```
+What about on training set
+
+```{r}
+dataTrain$PredRF.probability <-predict(
+                rf,
+                newdata = dataTrain,
+                
+)
+dataTrain$PredRF <- ifelse(dataTrain$PredRF.probability > 0.5, 1, 0)
+
+conf_matrixRF.Train <- table(dataTrain$PredRF, dataTrain$IsAttrition)
+accuracy.RF.Train <- sum(diag(conf_matrixRF.Train))/sum(conf_matrixRF.Train)
+accuracy.RF.Train
+```
+```{r}
+#plot of the models perfomance
+par(mfrow = c(2,2))
+library(vcd)
+mosaic(
+  structable(conf_matrixAll),
+  labeling = labeling_values, 
+  pop = FALSE, 
+  main = "Confusion Matrix (Test) for model glmAll")
+
+mosaic(
+  structable(conf_matrixSig),
+  labeling = labeling_values, 
+  pop = FALSE, 
+  main = "Confusion Matrix (Test) for model glmSigSubset")
+
+mosaic(
+  structable(conf_matrixTree),
+  labeling = labeling_values, 
+  pop = FALSE, 
+  main = "Confusion Matrix (Test) for model Decision Tree")
+
+mosaic(
+  structable(conf_matrixRF.test),
+  labeling = labeling_values, 
+  pop = FALSE, 
+  main = "Confusion Matrix (Test) for model Random Forest RF")
+```
+Comparing LMs and GLMs
+```{r}
+library("rcompanion")
+compareLM(lmAll,lmBest5,lmBest17)
+compareGLM(glmAll,glmSigSubset)
+```
+```{r}
+install.packages("github")
+```
+
+
+
+
+
