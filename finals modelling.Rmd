@@ -126,7 +126,7 @@ Linear.Model.03 <- lm(
             
 )
 
-#Best 17
+#Best 22
 
 Linear.Model.04 <- lm(
             formula = YearsAtCompany ~ Age+Department+DistanceFromHome+EnvironmentSatisfaction+
