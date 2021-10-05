@@ -1,3 +1,4 @@
+
 Load the files: the new employees data and the hays data
 
 ```{r}
@@ -45,14 +46,14 @@ dataTest <- data[-train,]
 
 ```
 
-Linear model lmAll
+Linear modelling Linear.Model.01
 
 ```{r}
-lmAll <- lm(
+Linear.Model.01 <- lm(
 formula = YearsAtCompany ~ .,
 data = dataTrain
 )
-summary(lmAll)
+summary(Linear.Model.01)
 
 ```
 Use leaps package to work out which combinations best explain target
@@ -109,12 +110,15 @@ coef(bestSubset, 22)
 ```
 ```{r}
 #linear models deemed by by regsubsets, bic and c scores
-lmBest5 <- lm(
+#best 5
+Linear.Model.02 <- lm(
             formula = YearsAtCompany ~ NumCompaniesWorked + TotalWorkingYears + YearsInCurrentRole +     YearsSinceLastPromotion + YearsWithCurrManager ,
             data = dataTrain,
             
 )
-lmBest17 <- lm(
+
+#best 17
+Linear.Model.03 <- lm(
             formula = YearsAtCompany ~ Department+DistanceFromHome+EnvironmentSatisfaction+Gender+
                 JobInvolvement+JobRole+NumCompaniesWorked+RelationshipSatisfaction+TotalWorkingYears+
                 YearsInCurrentRole+YearsSinceLastPromotion +YearsWithCurrManager+IndustryRange+IsManagement,
@@ -122,7 +126,9 @@ lmBest17 <- lm(
             
 )
 
-lmBest22 <- lm(
+#Best 17
+
+Linear.Model.04 <- lm(
             formula = YearsAtCompany ~ Age+Department+DistanceFromHome+EnvironmentSatisfaction+
                 Gender+JobInvolvement+JobRole+NumCompaniesWorked+
                 PerformanceRating+RelationshipSatisfaction+StockOptionLevel+
@@ -138,47 +144,47 @@ lmBest22 <- lm(
 ```
 ```{r}
 #final test on linear models deemed by by regsubsets, bic and c scores
-dataTest$PredictionYears5 <- predict(
-                                  lmBest5,
+dataTest$PredictionYears.lm02 <- predict(
+                                  Linear.Model.02,
                                   newdata = dataTest,
                                   type = "response"
 )
-dataTest$PredictionYears17 <- predict(
-                                  lmBest17,
-                                  newdata = dataTest,
-                                  type = "response"
-)
-
-dataTest$PredictionYears5 <- predict(
-                                  lmBest5,
-                                  newdata = dataTest,
-                                  type = "response"
-)
-dataTest$PredictionYears22 <- predict(
-                                  lmBest22,
+dataTest$PredictionYears.lm03 <- predict(
+                                  Linear.Model.03,
                                   newdata = dataTest,
                                   type = "response"
 )
 
-mean((dataTest$YearsAtCompany - dataTest$PredictionYears5)^2) #least so it is best
-mean((dataTest$YearsAtCompany - dataTest$PredictionYears17)^2)
-mean((dataTest$YearsAtCompany - dataTest$PredictionYears22)^2)
+dataTest$PredictionYears.lm02 <- predict(
+                                  Linear.Model.02,
+                                  newdata = dataTest,
+                                  type = "response"
+)
+dataTest$PredictionYears.lm04 <- predict(
+                                  Linear.Model.04,
+                                  newdata = dataTest,
+                                  type = "response"
+)
+
+mean((dataTest$YearsAtCompany - dataTest$PredictionYears.lm02)^2) #least so it is best
+mean((dataTest$YearsAtCompany - dataTest$PredictionYears.lm03)^2)
+mean((dataTest$YearsAtCompany - dataTest$PredictionYears.lm04)^2)
 
 #what about on train data
 
-dataTrain$PredictionYears5 <- predict(
-                                  lmBest5,
+dataTrain$PredictionYears.lm02 <- predict(
+                                  Linear.Model.02,
                                   newdata = dataTrain,
                                   type = "response"
 )
-dataTrain$PredictionYears17 <- predict(
-                                  lmBest17,
+dataTrain$PredictionYears.lm03 <- predict(
+                                  Linear.Model.03,
                                   newdata = dataTrain,
                                   type = "response"
 )
 
-mean((dataTrain$YearsAtCompany - dataTrain$PredictionYears5)^2) #least so it is best
-mean((dataTrain$YearsAtCompany - dataTrain$PredictionYears17)^2)
+mean((dataTrain$YearsAtCompany - dataTrain$PredictionYears.lm02)^2) #least so it is best
+mean((dataTrain$YearsAtCompany - dataTrain$PredictionYears.lm03)^2)
 
 ```
 ```{r}
@@ -188,7 +194,7 @@ barplot(
 
 )
 barplot(
-    dataTest$PredictionYears5,
+    dataTest$PredictionYears.lm02,
     col = "blue",
     add = TRUE
     
@@ -201,7 +207,7 @@ Logistic model logmod
 
 ```{r}
 #gml model with all variables 
-glmAll <- glm(
+gLinear.Model.05 <- glm(
           IsAttrition ~  Age +BusinessTravel +Department + 
                          DistanceFromHome +Education + EnvironmentSatisfaction + 
                          Gender + JobInvolvement + JobRole + 
@@ -215,9 +221,9 @@ glmAll <- glm(
     control = list(maxit = 27)
 )
 
-summary(glmAll)
+summary(gLinear.Model.05)
 
-glmSigSubset <- glm(
+gLinear.Model.06 <- glm(
           IsAttrition ~ Age +DistanceFromHome + EnvironmentSatisfaction + 
                         JobInvolvement + JobRole + MaritalStatus  + 
                         NumCompaniesWorked + OverTime   +YearsInCurrentRole + 
@@ -226,66 +232,75 @@ glmSigSubset <- glm(
     family = binomial,
     control = list(maxit = 27)
 )
-summary(glmSigSubset)
+summary(gLinear.Model.06)
 ```
 
 
-gmlpreditions
+gLm preditions
 
 ```{r}
-dataTest$ProbabilityAttritionAll <- predict(
-        glmAll,
+dataTest$ProbabilityAttrition05 <- predict(
+        gLinear.Model.05,
         newdata = dataTest,
         type = "response"
 )
 
-dataTest$ProbabilityAttritionSig <- predict(
-        glmSigSubset,
+dataTest$ProbabilityAttrition06 <- predict(
+        gLinear.Model.06,
         newdata = dataTest,
         type = "response"
 )
 
-dataTest$PreditionAttritionAll <- ifelse(dataTest$ProbabilityAttritionAll > 0.5, 1, 0)
-dataTest$PreditionAttritionSig <- ifelse(dataTest$ProbabilityAttritionSig > 0.5, 1, 0)
+dataTest$PredictionAttrition05 <- ifelse(dataTest$ProbabilityAttrition05 > 0.5, 1, 0)
+dataTest$PredictionAttrition06 <- ifelse(dataTest$ProbabilityAttrition06 > 0.5, 1, 0)
 
+boxplot(
+  dataTest$ProbabilityAttrition06 ~ dataTest$Attrition
+  
+)
+
+boxplot(
+  dataTest$ProbabilityAttrition05 ~ dataTest$Attrition
+  
+)
 #Confusion matrix 
 
-conf_matrixAll <- table(dataTest$PreditionAttritionAll, dataTest$IsAttrition)
-accuracy.glmAll.test <- sum(diag(conf_matrixAll))/sum(conf_matrixAll)
-accuracy.glmAll.test
+conf_matrixAll <- table(dataTest$PredictionAttrition05, dataTest$IsAttrition)
+accuracy.gLinear.Model.05.test <- sum(diag(conf_matrixAll))/sum(conf_matrixAll)
+accuracy.gLinear.Model.05.test
 
-conf_matrixSig <- table(dataTest$PreditionAttritionSig, dataTest$IsAttrition)
-accuracy.glmSigSubset.test <- sum(diag(conf_matrixSig))/sum(conf_matrixSig)
-accuracy.glmSigSubset.test
+conf_matrixSig <- table(dataTest$PredictionAttrition06, dataTest$IsAttrition)
+accuracy.gLinear.Model.06.test <- sum(diag(conf_matrixSig))/sum(conf_matrixSig)
+accuracy.gLinear.Model.06.test
 ```
 
 Accuracy on Train data
 
 ```{r}
-dataTrain$ProbabilityAttritionAll <- predict(
-        glmAll,
+dataTrain$ProbabilityAttrition05 <- predict(
+        gLinear.Model.05,
         newdata = dataTrain,
         type = "response"
 )
 
-dataTrain$ProbabilityAttritionSig <- predict(
-        glmSigSubset,
+dataTrain$ProbabilityAttrition06 <- predict(
+        gLinear.Model.06,
         newdata = dataTrain,
         type = "response"
 )
 
-dataTrain$PreditionAttritionAll <- ifelse(dataTrain$ProbabilityAttritionAll > 0.5, 1, 0)
-dataTrain$PreditionAttritionSig <- ifelse(dataTrain$ProbabilityAttritionSig > 0.5, 1, 0)
+dataTrain$PredictionAttrition05 <- ifelse(dataTrain$ProbabilityAttrition05 > 0.5, 1, 0)
+dataTrain$PredictionAttrition06 <- ifelse(dataTrain$ProbabilityAttrition06 > 0.5, 1, 0)
 
 #Confusion matrix 
 
-(conf_matrixAll.train <- table(dataTrain$PreditionAttritionAll, dataTrain$IsAttrition))
-accuracy.glmAll.train <- sum(diag(conf_matrixAll.train))/sum(conf_matrixAll.train)
-accuracy.glmAll.train
+(conf_matrixAll.train <- table(dataTrain$PredictionAttrition05, dataTrain$IsAttrition))
+accuracy.gLinear.Model.05.train <- sum(diag(conf_matrixAll.train))/sum(conf_matrixAll.train)
+accuracy.gLinear.Model.05.train
 
-conf_matrixSig.train <- table(dataTrain$PreditionAttritionSig, dataTrain$IsAttrition)
-accuracy.glmSigSubset.train <- sum(diag(conf_matrixSig.train))/sum(conf_matrixSig.train)
-accuracy.glmSigSubset.train
+conf_matrixSig.train <- table(dataTrain$PredictionAttrition06, dataTrain$IsAttrition)
+accuracy.gLinear.Model.06.train <- sum(diag(conf_matrixSig.train))/sum(conf_matrixSig.train)
+accuracy.gLinear.Model.06.train
 ```
 
 Modelling with a Decision Tree
@@ -342,7 +357,7 @@ Random forest
 
 library(randomForest)
 require(caTools)
-rf <- randomForest(
+random.forest <- randomForest(
   IsAttrition ~ Age +BusinessTravel +Department + DistanceFromHome +
                 Education + EnvironmentSatisfaction + Gender + 
                 JobInvolvement + JobRole + MaritalStatus + 
@@ -356,7 +371,7 @@ rf <- randomForest(
 )
 
 dataTest$PredRF.probability <-predict(
-                rf,
+                random.forest,
                 newdata = dataTest
                 
 )
@@ -366,12 +381,19 @@ conf_matrixRF.test <- table(dataTest$PredRF, dataTest$IsAttrition)
 accuracy.RF.test <- sum(diag(conf_matrixRF.test))/sum(conf_matrixRF.test)
 accuracy.RF.test
 
+boxplot(
+  dataTest$PredRF.probability ~ dataTest$Attrition
+  
+)
+
+
+
 ```
 What about on training set
 
 ```{r}
 dataTrain$PredRF.probability <-predict(
-                rf,
+                random.forest,
                 newdata = dataTrain,
                 
 )
@@ -389,13 +411,13 @@ mosaic(
   structable(conf_matrixAll),
   labeling = labeling_values, 
   pop = FALSE, 
-  main = "Confusion Matrix (Test) for model glmAll")
+  main = "Confusion Matrix (Test) for model gLinear.Model.05")
 
 mosaic(
   structable(conf_matrixSig),
   labeling = labeling_values, 
   pop = FALSE, 
-  main = "Confusion Matrix (Test) for model glmSigSubset")
+  main = "Confusion Matrix (Test) for model gLinear.Model.06")
 
 mosaic(
   structable(conf_matrixTree),
@@ -412,12 +434,19 @@ mosaic(
 Comparing LMs and GLMs
 ```{r}
 library("rcompanion")
-compareLM(lmAll,lmBest5,lmBest17)
-compareGLM(glmAll,glmSigSubset)
+compareLM(Linear.Model.01,Linear.Model.02,Linear.Model.03)
+compareGLM(gLinear.Model.05,gLinear.Model.06)
 ```
 ```{r}
-install.packages("github")
+atRisk <- subset(
+                dataTest,
+                (dataTest$YearsAtCompany+1.5) > dataTest$PredictionYears.lm02
+                )
+table(dataTest$Attrition)
+table(atRisk$Attrition)
 ```
+
+
 
 
 
