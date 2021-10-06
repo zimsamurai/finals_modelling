@@ -328,6 +328,11 @@ dataTest$PredictionTree <-predict(
   newdata = dataTest,
   type = "class"
 )
+Probability.Tree <-predict(
+  tree,
+  newdata = dataTest
+  
+)
 
 conf_matrixTree <- table(dataTest$PredictionTree, dataTest$Attrition)
 accuracy.Tree.test <- sum(diag(conf_matrixTree))/sum(conf_matrixTree)
@@ -379,7 +384,7 @@ boxplot(
   
 )
 
-
+random.forest$importance
 
 ```
 What about on training set
@@ -438,28 +443,45 @@ atRisk <- subset(
 table(dataTest$Attrition)
 table(atRisk$Attrition)
 ```
+```{r}
+#residuals plot
+par(mfrow = c(1,3))
+plot(gLinear.Model.06$residuals ~ dataTrain$ProbabilityAttrition06, col = "blue", ylab = "Residuals", xlab = "Predicted Probability")
+boxplot(gLinear.Model.06$residuals)
+hist(gLinear.Model.06$residuals, xlab = "Residulas", main ="")
+
+```
+
+
 Performance
 
 ```{r}
 library(ROCR)
-pred5 = prediction(dataTest$ProbabilityAttrition05, dataTest$Attrition)
-pred6 = prediction(dataTest$ProbabilityAttrition06, dataTest$Attrition)
 
-pred8 = prediction(dataTest$PredRF.probability, dataTest$Attrition)
-perf = performance(pred5, "acc")
+pred6 <- prediction(
+  dataTest$ProbabilityAttrition06, dataTest$Attrition
+  )
+pred7 <- prediction(
+  data.frame(Probability.Tree)$Yes, dataTest$Attrition
+  )
+pred8 <- prediction(
+  dataTest$PredRF.probability, dataTest$Attrition
+  )
+perf <- performance(pred6, "acc")
 plot(perf)
 
-perf_cost = performance(pred5, "cost")
+perf_cost <- performance(pred6, "cost")
 
 plot(perf_cost)
-roc = performance(pred5,"tpr","fpr")
-roc6 = performance(pred6,"tpr","fpr")
-#roc7 = performance(pred6,"tpr","fpr")
-roc8 = performance(pred8,"tpr","fpr")
-plot(roc, colorize = T, lwd = 2)
-plot(roc6, colorize = F, lwd = 2, add = TRUE)
-plot(roc8, col="yellow", lwd = 2, add = TRUE)
+
+roc6 <- performance(pred6,"tpr","fpr")
+roc7 <- performance(pred7,"tpr","fpr")
+roc8 <- performance(pred8,"tpr","fpr")
+plot(roc6, col = "blue", lwd = 2)
+plot(roc7, col = "magenta", lwd = 2, add = TRUE)
+plot(roc8, col="orange", lwd = 2, add = TRUE)
 abline(a = 0, b = 1)
+
 ```
 
 
