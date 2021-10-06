@@ -39,7 +39,7 @@ Linear Model lmIncome
 
 ```{r}
 numRows <- nrow(data)
-set.seed(60) #changed from 57
+set.seed(57) #changed from 57
 train <- sample(numRows, 0.8*numRows)
 dataTrain <- data[train, ]
 dataTest <- data[-train,]
@@ -89,7 +89,7 @@ Plotting the best(bic, for example) measure
 plot(
 summary(bestSubset)$bic,
 type = "l",
-main = "No variables by BIC",
+main = "Figure 1: Number variables by BIC",
 xlab = "Number of Variables",
 ylab = "BIC",
 )
@@ -182,27 +182,21 @@ dataTrain$PredictionYears.lm03 <- predict(
                                   newdata = dataTrain,
                                   type = "response"
 )
-
+summary(Linear.Model.02)
 mean((dataTrain$YearsAtCompany - dataTrain$PredictionYears.lm02)^2) #least so it is best
 mean((dataTrain$YearsAtCompany - dataTrain$PredictionYears.lm03)^2)
 
 ```
 ```{r}
-barplot(
-    dataTest$YearsAtCompany,
-    col = "red",
-
-)
-barplot(
-    dataTest$PredictionYears.lm02,
-    col = "blue",
-    add = TRUE
-    
-)
+#checking assumptions of linearility
+par(mfrow = c(1,3))
+plot(Linear.Model.02$residuals, col = "blue", ylab = "Residuals")
+hist(Linear.Model.02$residuals, xlab = "Residulas", main = "Residual plots")
+boxplot(Linear.Model.02$residuals)
 ```
 
 
-Logistic model logmod
+Logistic modelling
 
 
 ```{r}
@@ -320,13 +314,12 @@ tree <- rpart(
               IndustryRange + RelationshipSatisfaction + IsManagement,
         data = dataTrain,
         method = "class",
-        #parms=list(split="gini"),
         minsplit=20, #smallest number of observations in the parent node that could be split further.default is 20.
         minbucket = 1 #smallest number of observations that are allowed in a terminal node
 )
 
 rpart.plot(tree)
-tree
+summary(tree)
 
 ```
 ```{r}
@@ -367,7 +360,7 @@ random.forest <- randomForest(
                 YearsInCurrentRole + YearsSinceLastPromotion  +YearsWithCurrManager +
                 IndustryRange + IsManagement,
   data = dataTrain,
-  parms=list(split="gini")
+  parms=list(split="information")
 )
 
 dataTest$PredRF.probability <-predict(
@@ -405,31 +398,31 @@ accuracy.RF.Train
 ```
 ```{r}
 #plot of the models perfomance
-par(mfrow = c(2,2))
+par(mfcol = c(2,2))
 library(vcd)
 mosaic(
   structable(conf_matrixAll),
   labeling = labeling_values, 
   pop = FALSE, 
-  main = "Confusion Matrix (Test) for model gLinear.Model.05")
+  main = "gLinear.Model.05")
 
 mosaic(
   structable(conf_matrixSig),
   labeling = labeling_values, 
   pop = FALSE, 
-  main = "Confusion Matrix (Test) for model gLinear.Model.06")
+  main = "gLinear.Model.06")
 
 mosaic(
   structable(conf_matrixTree),
   labeling = labeling_values, 
   pop = FALSE, 
-  main = "Confusion Matrix (Test) for model Decision Tree")
+  main = "Decision Tree")
 
 mosaic(
   structable(conf_matrixRF.test),
   labeling = labeling_values, 
   pop = FALSE, 
-  main = "Confusion Matrix (Test) for model Random Forest RF")
+  main = "Random Forest")
 ```
 Comparing LMs and GLMs
 ```{r}
@@ -440,10 +433,33 @@ compareGLM(gLinear.Model.05,gLinear.Model.06)
 ```{r}
 atRisk <- subset(
                 dataTest,
-                (dataTest$YearsAtCompany+1.5) > dataTest$PredictionYears.lm02
+                (dataTest$YearsAtCompany+1) > dataTest$PredictionYears.lm02
                 )
 table(dataTest$Attrition)
 table(atRisk$Attrition)
+```
+Performance
+
+```{r}
+library(ROCR)
+pred5 = prediction(dataTest$ProbabilityAttrition05, dataTest$Attrition)
+pred6 = prediction(dataTest$ProbabilityAttrition06, dataTest$Attrition)
+
+pred8 = prediction(dataTest$PredRF.probability, dataTest$Attrition)
+perf = performance(pred5, "acc")
+plot(perf)
+
+perf_cost = performance(pred5, "cost")
+
+plot(perf_cost)
+roc = performance(pred5,"tpr","fpr")
+roc6 = performance(pred6,"tpr","fpr")
+#roc7 = performance(pred6,"tpr","fpr")
+roc8 = performance(pred8,"tpr","fpr")
+plot(roc, colorize = T, lwd = 2)
+plot(roc6, colorize = F, lwd = 2, add = TRUE)
+plot(roc8, col="yellow", lwd = 2, add = TRUE)
+abline(a = 0, b = 1)
 ```
 
 
