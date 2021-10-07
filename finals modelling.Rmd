@@ -1,3 +1,8 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
 
 Load the files: the new employees data and the hays data
 
@@ -428,6 +433,15 @@ mosaic(
   labeling = labeling_values, 
   pop = FALSE, 
   main = "Random Forest")
+
+library(cutpointr)
+tpr <- tpr(c(9,4,5), c(11,16,15))
+fpr <- fpr(c(12,9,5), c(168,171,175))
+tnr <-tnr(c(12,9,5), c(168,171,175))
+fnr <- fnr(c(9,4,5), c(11,16,15))
+models.summary <- data.frame(Model = c("gLinear.Model.06","Decision Tree","Random Forest"), TPR = tpr,FPR = fpr,TNR = tnr,FNR = fnr)
+models.summary
+
 ```
 Comparing LMs and GLMs
 ```{r}
@@ -467,22 +481,44 @@ pred7 <- prediction(
 pred8 <- prediction(
   dataTest$PredRF.probability, dataTest$Attrition
   )
-perf <- performance(pred6, "acc")
-plot(perf)
 
-perf_cost <- performance(pred6, "cost")
 
-plot(perf_cost)
+#ROC curves
 
 roc6 <- performance(pred6,"tpr","fpr")
 roc7 <- performance(pred7,"tpr","fpr")
 roc8 <- performance(pred8,"tpr","fpr")
-plot(roc6, col = "blue", lwd = 2)
+plot(roc6, col = "blue", lwd = 2,main="Receiver Operating Characteristic Comparison")
 plot(roc7, col = "magenta", lwd = 2, add = TRUE)
 plot(roc8, col="orange", lwd = 2, add = TRUE)
 abline(a = 0, b = 1)
 
+
+#Lift
+lift6 <- performance(pred6,"lift","rpp")
+lift7 <- performance(pred7,"lift","rpp")
+lift8 <- performance(pred8,"lift","rpp")
+plot(lift6, col = "blue", lwd = 2, main = "Lift curve")
+plot(lift7, col = "magenta", lwd = 2, add = TRUE)
+plot(lift8, col="orange", lwd = 2, add = TRUE)
+
+#Sensitivity - specificity
+
+sens6 <- performance(pred6,"sens","spec")
+sens7 <- performance(pred7,"sens","spec")
+sens8 <- performance(pred8,"sens","spec")
+plot(sens6, col = "blue", lwd = 2,main ="Sensitivity - Specificity")
+plot(sens7, col = "magenta", lwd = 2, add = TRUE)
+plot(sens8, col="orange", lwd = 2, add = TRUE)
+
 ```
+Compare performance
+
+```{r}
+library(performance)
+compare_performance(gLinear.Model.05,gLinear.Model.06, rank = TRUE)
+```
+
 
 
 
