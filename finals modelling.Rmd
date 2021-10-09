@@ -192,6 +192,28 @@ mean((dataTrain$YearsAtCompany - dataTrain$PredictionYears.lm02)^2) #least so it
 mean((dataTrain$YearsAtCompany - dataTrain$PredictionYears.lm03)^2)
 
 ```
+Making Linear.Model.02 a classifier
+
+```{r}
+#Classification Rule
+
+dataTest$PredictionAttrition02 <- ifelse(
+  (dataTest$YearsAtCompany+0.5) > dataTest$PredictionYears.lm02 ,
+  "Yes", 
+  "No"
+  )
+
+  
+
+#Confusion matrix 
+
+conf_matrix02 <- table(dataTest$PredictionAttrition02, dataTest$IsAttrition)
+accuracy.gLinear.Model.02.test <- sum(diag(conf_matrix02))/sum(conf_matrix02)
+accuracy.gLinear.Model.02.test
+
+```
+
+
 ```{r}
 #checking assumptions of linearility
 par(mfrow = c(1,3))
@@ -232,6 +254,7 @@ gLinear.Model.06 <- glm(
     control = list(maxit = 27)
 )
 summary(gLinear.Model.06)
+
 ```
 
 
@@ -300,7 +323,44 @@ accuracy.gLinear.Model.05.train
 conf_matrixSig.train <- table(dataTrain$PredictionAttrition06, dataTrain$IsAttrition)
 accuracy.gLinear.Model.06.train <- sum(diag(conf_matrixSig.train))/sum(conf_matrixSig.train)
 accuracy.gLinear.Model.06.train
+
+
+
 ```
+
+```{r}
+#Variable importance Linear.Model.02 and gLinear.Model.06
+
+library(caret)
+
+old_par <- par(no.readonly=TRUE)
+par(
+    mar = c(4, 12, 1, 1),
+    cex = 0.7
+)
+barplot(
+  t(varImp(gLinear.Model.06, scale = FALSE)),
+  main = "gLinear.Model.06 Variable Importance",
+  las = 2,
+  horiz = TRUE
+  )
+
+par(
+    mar = c(4, 8, 1, 1),
+    cex = 0.7
+) 
+
+
+barplot(
+  t(varImp(Linear.Model.02, scale = FALSE)),
+  main = "Linear.Model.02 Variable Importance",
+  col = "blue",
+  las = 2,
+ 
+)
+par(old_par)
+```
+
 
 Modelling with a Decision Tree
 
@@ -308,6 +368,7 @@ Modelling with a Decision Tree
 
 library(rpart)
 library(rpart.plot)
+
 tree <- rpart(
             Attrition ~ Age +BusinessTravel +Department + 
               DistanceFromHome + Education + EnvironmentSatisfaction + 
@@ -323,8 +384,9 @@ tree <- rpart(
         minbucket = 1 #smallest number of observations that are allowed in a terminal node
 )
 
-rpart.plot(tree)
-summary(tree)
+prp(tree,cex = 0.6,box.palette = "auto") 
+
+tree
 
 ```
 ```{r}
@@ -389,7 +451,31 @@ boxplot(
   
 )
 
-random.forest$importance
+#Variable importance plots for tree and RF
+old_par <- par(no.readonly=TRUE)
+par(
+    mar = c(3, 11, 1, 1),
+    cex = 0.7
+    
+)
+barplot(
+  t(tree$variable.importance),
+  las = 2,
+  col = "blue",
+  horiz = TRUE,
+  main = "Decision Tree"
+  )
+
+barplot(
+  t(random.forest$importance),
+  las = 2,
+  col = 'lightgrey',
+  horiz = TRUE,
+  main = "Random Forest"
+  )
+par(old_par)
+
+summary(random.forest)
 
 ```
 What about on training set
@@ -410,6 +496,11 @@ accuracy.RF.Train
 #plot of the models perfomance
 par(mfcol = c(2,2))
 library(vcd)
+mosaic(
+  structable(conf_matrix02),
+  labeling = labeling_values, 
+  pop = FALSE, 
+  main = "Linear.Model.02")
 mosaic(
   structable(conf_matrixAll),
   labeling = labeling_values, 
@@ -435,11 +526,11 @@ mosaic(
   main = "Random Forest")
 
 library(cutpointr)
-tpr <- tpr(c(9,4,5), c(11,16,15))
-fpr <- fpr(c(12,9,5), c(168,171,175))
-tnr <-tnr(c(12,9,5), c(168,171,175))
-fnr <- fnr(c(9,4,5), c(11,16,15))
-models.summary <- data.frame(Model = c("gLinear.Model.06","Decision Tree","Random Forest"), TPR = tpr,FPR = fpr,TNR = tnr,FNR = fnr)
+tpr <- tpr(c(11,9,4,5), c(9,11,16,15))
+fpr <- fpr(c(102,12,9,5), c(78,168,171,175))
+tnr <-tnr(c(102,12,9,5), c(78,168,171,175))
+fnr <- fnr(c(11,9,4,5), c(9,11,16,15))
+models.summary <- data.frame(Model = c("Linear.Model.02(classifier)","gLinear.Model.06","Decision Tree","Random Forest"), TPR = tpr,FPR = fpr,TNR = tnr,FNR = fnr)
 models.summary
 
 ```
@@ -449,14 +540,7 @@ library("rcompanion")
 compareLM(Linear.Model.01,Linear.Model.02,Linear.Model.03)
 compareGLM(gLinear.Model.05,gLinear.Model.06)
 ```
-```{r}
-atRisk <- subset(
-                dataTest,
-                (dataTest$YearsAtCompany+1) > dataTest$PredictionYears.lm02
-                )
-table(dataTest$Attrition)
-table(atRisk$Attrition)
-```
+
 ```{r}
 #residuals plot
 par(mfrow = c(1,3))
@@ -512,12 +596,8 @@ plot(sens7, col = "magenta", lwd = 2, add = TRUE)
 plot(sens8, col="orange", lwd = 2, add = TRUE)
 
 ```
-Compare performance
 
-```{r}
-library(performance)
-compare_performance(gLinear.Model.05,gLinear.Model.06, rank = TRUE)
-```
+
 
 
 
