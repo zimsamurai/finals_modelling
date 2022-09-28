@@ -43,22 +43,37 @@ Add holiday information
 
 
 ```{r}
-adl_holidays <- rbind(
-                      (read.csv(file= 
-                                 ,header = TRUE),
-                      (read.csv(file= 
-                                 ,header = TRUE),
-                       (read.csv(file= 
-                                 ,header = TRUE),
-                        (read.csv(file= 
-                                 ,header = TRUE),
-                         (read.csv(file= 
-                                 ,header = TRUE),
-                          (read.csv(file= 
-                                 ,header = TRUE),
-                           (read.csv(file= 
-                                 ,header = TRUE),
+holidays21_23 <- read.csv(file ="https://data.gov.au/data/dataset/b1bc6077-dadd-4f61-9f8c-002ab2cdff10/resource/d256f989-8f49-46eb-9770-1c6ee9bd2661/download/australian_public_holidays_2023.csv", header = TRUE)
+
+holidays20 <- read.csv(file = "https://data.gov.au/data/dataset/b1bc6077-dadd-4f61-9f8c-002ab2cdff10/resource/c4163dc4-4f5a-4cae-b787-43ef0fcf8d8b/download/australian_public_holidays_2020.csv", header = TRUE)
+
+holidays19 <- read.csv(file = "https://data.gov.au/data/dataset/b1bc6077-dadd-4f61-9f8c-002ab2cdff10/resource/bda4d4f2-7fde-4bfc-8a23-a6eefc8cef80/download/australian_public_holidays_2019.csv", header = TRUE)
+holidays19 <- holidays19[-1 ]
+
+holidays18 <- read.csv(file = "https://data.gov.au/data/dataset/b1bc6077-dadd-4f61-9f8c-002ab2cdff10/resource/253d63c0-af1f-4f4c-b8d5-eb9d9b1d46ab/download/australianpublicholidays-201718.csv", header = TRUE)
+names(holidays18)[5] <- 'Jurisdiction'
+
+holidays17 <- read.csv(file = "https://data.gov.au/data/dataset/b1bc6077-dadd-4f61-9f8c-002ab2cdff10/resource/a24ecaf2-044a-4e66-989c-eacc81ded62f/download/australianpublicholidays-201617.csv", header = TRUE)
+names(holidays17)[5] <- 'Jurisdiction'
+
+#Filter for SA holidays only
+
+sa_holidays <- rbind(holidays17,holidays18,holidays19,holidays20,holidays21_23)
+sa_holidays <-sa_holidays[sa_holidays$Jurisdiction == "SA",]
+                     
+#Format dates in SA holidays 
+
+sa_holidays$Date <- as.Date(as.character(sa_holidays$Date), format = "%Y%m%d")
 ```
+Adding the above holiday information
+```{r}
+data$IsHoliday
+a <-"2016-03-14" %in% c("2016-03-14","2016-12-16")
+
+barplot(a)
+```
+
+
 Linear Model 
 
 ```{r}
