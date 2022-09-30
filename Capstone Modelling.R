@@ -25,7 +25,11 @@ Combine the Crime Statistics
 data <-rbind( CrimeStatistics2017_18,CrimeStatistics2018_19, CrimeStatistics2019_20,
              CrimeStatistics2020_21, CrimeStatistics2021_22
 )
+rm(CrimeStatistics2017_18,CrimeStatistics2018_19, CrimeStatistics2019_20,
+             CrimeStatistics2020_21, CrimeStatistics2021_22)
 data$Reported.Date <- as.Date(data$Reported.Date, format = "%d/%m/%Y")
+names(data)[2] <- 'Suburb'
+names(data)[3] <- 'Postcode'
 head(data)
 ```
 Enrich the data:
@@ -59,6 +63,7 @@ names(holidays17)[5] <- 'Jurisdiction'
 #Filter for SA holidays only
 
 sa_holidays <- rbind(holidays17,holidays18,holidays19,holidays20,holidays21_23)
+rm(holidays17,holidays18,holidays19,holidays20,holidays21_23) #to clear memory
 sa_holidays <-sa_holidays[sa_holidays$Jurisdiction == "SA",]
                      
 #Format dates in SA holidays 
@@ -67,16 +72,18 @@ sa_holidays$Date <- as.Date(as.character(sa_holidays$Date), format = "%Y%m%d")
 ```
 Adding the above holiday information
 ```{r}
-data$IsHoliday
-a <-"2016-03-14" %in% c("2016-03-14","2016-12-16")
+v_sa_holidays <- sa_holidays$Date #to convert to vector
+data$IsHoliday <- ifelse(data$Reported.Date %in% v_sa_holidays,1,0)
 
-barplot(a)
 ```
 
 
 Linear Model 
 
 ```{r}
+library(car)
+names(data)[2] <- 'Suburb'
+names(data)[3] <- 'Postcode'
 numRows <- nrow(data)
 set.seed(57) 
 train <- sample(numRows, 0.8*numRows)
@@ -85,182 +92,83 @@ dataTest <- data[-train,]
 
 ```
 
-Linear modelling Linear.Model.01
+Linear modelling Linear.Model.00 and 01
 
 ```{r}
+#Train model 00
+Linear.Model.00 <- lm(
+  formula = Offence.count ~ Reported.Date + Postcode + Offence.Level.3.Description,
+  data = dataTrain
+)
+```
+```{r}
+summary(Linear.Model.00)
+#check for Multicollinearity
+
+vif(Linear.Model.00)
+```
+
+
+```{r}
+#Train model 01
+
 Linear.Model.01 <- lm(
-  formula = YearsAtCompany ~ .,
+  formula = Offence.count ~Postcode +Offence.Level.3.Description+  day +month  +year +wday+ IsHoliday,
   data = dataTrain
 )
 summary(Linear.Model.01)
-
-```
-Use leaps package to work out which combinations best explain target
-
-```{r}
-library(leaps)
-bestSubset <- regsubsets(
-  YearsAtCompany ~ .,
-  data = dataTrain,
-  nvmax = 24 #number of dependant variables
-)
-summary(bestSubset)
+#check for Multicollinearity
+vif(Linear.Model.01)
 ```
 
 ```{r}
-coef(bestSubset, 1:24)
-```
+#To add new factors in testData
+Linear.Model.01$xlevels[["Offence.Level.3.Description"]] <-union( Linear.Model.01$xlevels[["Offence.Level.3.Description"]],c("Aggravated sexual assault", "Non-aggravated sexual assault", "Non-assaultive sexual offences"))
 
-```{r}
-summary(bestSubset)$bic # Get all of the adjusted R^2 values
-```
-Judging which model is best there are different metrics
-
-```{r}
-which.max(summary(bestSubset)$adjr2)
-which.min(summary(bestSubset)$rss)
-which.min(summary(bestSubset)$cp)
-which.min(summary(bestSubset)$bic)
-```
-Plotting the best(bic, for example) measure
-
-```{r}
-plot(
-  summary(bestSubset)$bic,
-  type = "l",
-  main = "Figure 1: Number variables by BIC",
-  xlab = "Number of Variables",
-  ylab = "BIC",
-)
-
-bestBIC = which.min(summary(bestSubset)$bic)
-points(    #showing the point with lowest bic for example
-  x = bestBIC,
-  y = summary(bestSubset)$bic[bestBIC],
-  col = "red",
-  pch = "x"
-)
-```
-
-```{r}
-coef(bestSubset, 5)
-coef(bestSubset, 17)
-coef(bestSubset, 22)
-```
-```{r}
-#linear models deemed by by regsubsets, bic and c scores
-#best 5
-Linear.Model.02 <- lm(
-  formula =  ,
-  data = dataTrain,
-  
-)
-
-#best 17
-Linear.Model.03 <- lm(
-  formula = ,
-  data = dataTrain,
-  
-)
-
-#Best 22
-
-Linear.Model.04 <- lm(
-  formula = ,
-  data = dataTrain,
-  
-)
-
-
+Linear.Model.01$xlevels[["Postcode"]] <-union( Linear.Model.01$xlevels[["Postcode"]],c("2044", "2228", "2469", "2481", "2486", "2762", "3001", "3109", "3125", "3136", "3180", "3840", "5768", "7109"))
 
 ```
+
+Testing the model using held-out dataset
 ```{r}
-#final test on linear models deemed by by regsubsets, bic and c scores
-dataTest$PredictionYears.lm02 <- predict(
-  Linear.Model.02,
-  newdata = dataTest,
+
+dataTest$Prediction.lm01 <- predict(
+  Linear.Model.01,
+  newdata = dataTest, 
   type = "response"
 )
-dataTest$PredictionYears.lm03 <- predict(
-  Linear.Model.03,
-  newdata = dataTest,
-  type = "response"
-)
-
-dataTest$PredictionYears.lm02 <- predict(
-  Linear.Model.02,
-  newdata = dataTest,
-  type = "response"
-)
-dataTest$PredictionYears.lm04 <- predict(
-  Linear.Model.04,
-  newdata = dataTest,
-  type = "response"
-)
-
-mean((dataTest$YearsAtCompany - dataTest$PredictionYears.lm02)^2) #least so it is best
-mean((dataTest$YearsAtCompany - dataTest$PredictionYears.lm03)^2)
-mean((dataTest$YearsAtCompany - dataTest$PredictionYears.lm04)^2)
-
-#what about on train data
-
-dataTrain$PredictionYears.lm02 <- predict(
-  Linear.Model.02,
-  newdata = dataTrain,
-  type = "response"
-)
-dataTrain$PredictionYears.lm03 <- predict(
-  Linear.Model.03,
-  newdata = dataTrain,
-  type = "response"
-)
-summary(Linear.Model.02)
-mean((dataTrain$YearsAtCompany - dataTrain$PredictionYears.lm02)^2) #least so it is best
-mean((dataTrain$YearsAtCompany - dataTrain$PredictionYears.lm03)^2)
-
 ```
+
+```{r}
+rm(Linear.Model.01)
+Linear.Model.00$xlevels[["Offence.Level.3.Description"]] <-union( Linear.Model.00$xlevels[["Offence.Level.3.Description"]],c("Aggravated sexual assault", "Non-aggravated sexual assault", "Non-assaultive sexual offences"))
+
+Linear.Model.00$xlevels[["Postcode"]] <-union( Linear.Model.00$xlevels[["Postcode"]],c("2044", "2228", "2469", "2481", "2486", "2762", "3001", "3109", "3125", "3136", "3180", "3840", "5768", "7109"))
+
+dataTest$Prediction.lm00 <- predict(
+  Linear.Model.00,
+  newdata = dataTest, 
+  type = "response"
+)
+```
+
 
 ```{r}
 #checking assumptions of linearility
 par(mfrow = c(1,3))
-plot(Linear.Model.02$residuals, col = "blue", ylab = "Residuals")
-hist(Linear.Model.02$residuals, xlab = "Residulas", main = "Residual plots")
-boxplot(Linear.Model.02$residuals)
-```
-
-
-Logistic modelling
-
-
-```{r}
-#gml model with all variables 
-gLinear.Model.05 <- glm(
-  IsAttrition ~   ,
-  data = dataTrain,
-  family = binomial,
-  control = list(maxit = 27)
-)
-
-summary(gLinear.Model.05)
-
-gLinear.Model.06 <- glm(
-  IsAttrition ~ ,
-  data = dataTrain,
-  family = binomial,
-  control = list(maxit = 27)
-)
-summary(gLinear.Model.06)
-
+plot(Linear.Model.00$residuals, col = "blue", ylab = "Residuals")
+hist(Linear.Model.00$residuals, xlab = "Residulas", main = "Residual plots")
+boxplot(Linear.Model.00$residuals)
 ```
 
 
 
 ```{r}
+#check the RSS-residual sum of squares, the lower the better
+mean((dataTest$Offence.count - dataTest$Prediction.lm01)^2)
 
+mean((dataTest$Offence.count - dataTest$Prediction.lm00)^2)
 ```
-
-
-
 
 
 

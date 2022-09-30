@@ -1,0 +1,42 @@
+data <- read.csv(file ="Prepared_data.csv", header = TRUE)
+data$Postcode <- as.numeric(data$Postcode)   
+
+#to deal with NA like "NOT INCLUDED" OR BLANKS
+data$Postcode[which(is.na(data$Postcode))] <- 1000
+
+#Create train and tesing sets
+numRows <- nrow(data)
+set.seed(57) 
+train <- sample(numRows, 0.8*numRows)
+dataTrain <- data[train, ]
+dataTest <- data[-train,]
+
+#The model
+Linear.Model.01 <- lm(
+  formula = Offence.count ~Postcode +Offence.Level.3.Description+  day +month  +year +wday+ IsHoliday,
+  data = dataTrain
+)
+
+#Test the model
+
+dataTest$Prediction.lm01 <- predict(
+  Linear.Model.01,
+  newdata = dataTest, #[-c(1,2,3,5,6)],
+  type = "response"
+)
+
+#checking assumptions of linearility
+par(mfrow = c(1,3))
+plot(Linear.Model.01$residuals, col = "blue", ylab = "Residuals")
+hist(Linear.Model.01$residuals, xlab = "Residulas", main = "Residual plots")
+boxplot(Linear.Model.01$residuals)
+
+#check the least squares
+mean((dataTest$Offence.count - dataTest$Prediction.lm01)^2)
+
+#check for Multicollinearity
+library(car)
+vif(Linear.Model.01)
+
+write.csv(dataTest, "results.csv")
+summary(Linear.Model.01)
