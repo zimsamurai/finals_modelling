@@ -82,7 +82,8 @@ Linear Model
 
 ```{r}
 library(car)
-names(data)[2] <- 'Suburb'
+data <-na.omit(data) #to remove NA value
+names(data)[2] <- 'Suburb' #Renaming header
 names(data)[3] <- 'Postcode'
 numRows <- nrow(data)
 set.seed(57) 
@@ -168,6 +169,11 @@ boxplot(Linear.Model.00$residuals)
 mean((dataTest$Offence.count - dataTest$Prediction.lm01)^2)
 
 mean((dataTest$Offence.count - dataTest$Prediction.lm00)^2)
+```
+```{r}
+summary(data$Offence.count)
+boxplot(data$Offence.count)
+sd(data$Offence.count)*3
 ```
 
 
